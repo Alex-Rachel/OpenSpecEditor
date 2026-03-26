@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ChevronRight, ChevronDown, FileText, Zap, Loader2, MoreHorizontal, X, CheckCircle2 } from 'lucide-react';
+import { ChevronRight, ChevronDown, FileText, Zap, Loader2, MoreHorizontal, X, CheckCircle2, GitMerge, Database, CheckSquare, Code2 } from 'lucide-react';
 import { ActiveFile } from '../App';
 import { MOCK_FILE_CONTENT } from '../lib/mockData';
 
@@ -87,8 +87,23 @@ export function Editor({ activeFile }: { activeFile: ActiveFile }) {
     );
   }
 
-  const isSpecialTasksFile = activeFile.id === 'tsk';
+  const isSpecialTasksFile = activeFile.id === 'change-email-tsk';
   const fileContent = MOCK_FILE_CONTENT[activeFile.id] || ['File content not available.'];
+
+  // Check if the file is part of an OpenSpec change
+  const isChangeFile = activeFile.path?.includes('openspec/changes/');
+  const changeName = isChangeFile ? activeFile.path?.split('/')[2] : null;
+
+  const getArtifactType = (path?: string) => {
+    if (!path) return null;
+    if (path.includes('proposal.md')) return 'proposal';
+    if (path.includes('specs/')) return 'specs';
+    if (path.includes('design.md')) return 'design';
+    if (path.includes('tasks.md')) return 'tasks';
+    return 'implement';
+  };
+
+  const currentArtifact = getArtifactType(activeFile.path);
 
   return (
     <div className="w-full md:flex-1 flex flex-col bg-[#111116] min-w-0">
@@ -107,30 +122,70 @@ export function Editor({ activeFile }: { activeFile: ActiveFile }) {
       {/* Breadcrumbs */}
       <div className="flex items-center px-4 h-8 text-xs text-zinc-500 gap-1.5 shrink-0 bg-[#111116] overflow-x-auto hide-scrollbar whitespace-nowrap">
         <span className="hover:text-zinc-300 cursor-pointer transition-colors">kiro-app</span>
-        <ChevronRight size={12} />
-        <span className="text-zinc-400">{activeFile.name}</span>
+        {activeFile.path ? (
+          activeFile.path.split('/').map((part, idx, arr) => (
+            <div key={idx} className="flex items-center gap-1.5">
+              <ChevronRight size={12} />
+              <span className={idx === arr.length - 1 ? "text-zinc-400" : "hover:text-zinc-300 cursor-pointer transition-colors"}>
+                {part}
+              </span>
+            </div>
+          ))
+        ) : (
+          <>
+            <ChevronRight size={12} />
+            <span className="text-zinc-400">{activeFile.name}</span>
+          </>
+        )}
       </div>
 
-      {/* Spec Header (Only for tasks.md) */}
-      {isSpecialTasksFile && (
+      {/* OpenSpec Pipeline Header */}
+      {isChangeFile && (
         <div className="flex flex-col md:flex-row md:items-center px-4 md:px-6 py-3 gap-3 md:gap-6 border-b border-white/5 shrink-0 bg-[#111116]">
           <div className="flex items-center gap-2 text-sm font-medium text-zinc-300">
-            <FileText size={16} className="text-zinc-400" />
-            Spec: email-opt-in
+            <GitMerge size={16} className="text-orange-400" />
+            Change: {changeName}
           </div>
-          <div className="flex items-center gap-4 text-xs font-medium overflow-x-auto hide-scrollbar whitespace-nowrap pb-1 md:pb-0">
-            <div className="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 cursor-pointer transition-colors">
-              <span className="w-4 h-4 rounded-full bg-white/5 flex items-center justify-center text-[10px]">1</span>
-              Requirements
+          <div className="flex items-center gap-2 text-xs font-medium overflow-x-auto hide-scrollbar whitespace-nowrap pb-1 md:pb-0">
+            
+            {/* Proposal */}
+            <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-colors ${currentArtifact === 'proposal' ? 'bg-white/10 text-zinc-200' : 'text-zinc-500 hover:text-zinc-300'}`}>
+              <FileText size={14} className={currentArtifact === 'proposal' ? 'text-blue-400' : ''} />
+              Proposal
             </div>
-            <div className="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 cursor-pointer transition-colors">
-              <span className="w-4 h-4 rounded-full bg-white/5 flex items-center justify-center text-[10px]">2</span>
+            
+            <ChevronRight size={12} className="text-zinc-600" />
+            
+            {/* Specs */}
+            <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-colors ${currentArtifact === 'specs' ? 'bg-white/10 text-zinc-200' : 'text-zinc-500 hover:text-zinc-300'}`}>
+              <Database size={14} className={currentArtifact === 'specs' ? 'text-blue-400' : ''} />
+              Delta Specs
+            </div>
+            
+            <ChevronRight size={12} className="text-zinc-600" />
+            
+            {/* Design */}
+            <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-colors ${currentArtifact === 'design' ? 'bg-white/10 text-zinc-200' : 'text-zinc-500 hover:text-zinc-300'}`}>
+              <FileText size={14} className={currentArtifact === 'design' ? 'text-blue-400' : ''} />
               Design
             </div>
-            <div className="flex items-center gap-1.5 text-zinc-300 bg-white/5 px-2.5 py-1.5 rounded-md cursor-pointer">
-              <span className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-[10px]">3</span>
-              Task List
+            
+            <ChevronRight size={12} className="text-zinc-600" />
+            
+            {/* Tasks */}
+            <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-colors ${currentArtifact === 'tasks' ? 'bg-white/10 text-zinc-200' : 'text-zinc-500 hover:text-zinc-300'}`}>
+              <CheckSquare size={14} className={currentArtifact === 'tasks' ? 'text-blue-400' : ''} />
+              Tasks
             </div>
+            
+            <ChevronRight size={12} className="text-zinc-600" />
+            
+            {/* Implement */}
+            <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-colors ${currentArtifact === 'implement' ? 'bg-white/10 text-zinc-200' : 'text-zinc-500 hover:text-zinc-300'}`}>
+              <Code2 size={14} className={currentArtifact === 'implement' ? 'text-blue-400' : ''} />
+              Implement
+            </div>
+
           </div>
         </div>
       )}

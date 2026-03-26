@@ -7,13 +7,13 @@ import { AIPanel } from './components/AIPanel';
 import { CommandPalette } from './components/CommandPalette';
 import { Folder, Code, MessageSquare } from 'lucide-react';
 
-export type SidebarView = 'explorer' | 'search' | 'git' | 'debug' | 'extensions';
-export type ActiveFile = { id: string; name: string; lineNum?: number } | null;
+export type SidebarView = 'explorer' | 'search' | 'git' | 'debug' | 'extensions' | 'openspec';
+export type ActiveFile = { id: string; name: string; lineNum?: number; path?: string } | null;
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'sidebar' | 'editor' | 'ai'>('editor');
   const [activeSidebarView, setActiveSidebarView] = useState<SidebarView>('explorer');
-  const [activeFile, setActiveFile] = useState<ActiveFile>({ id: 'tsk', name: 'tasks.md' });
+  const [activeFile, setActiveFile] = useState<ActiveFile>({ id: 'change-email-tsk', name: 'tasks.md', path: 'openspec/changes/email-opt-in/tasks.md' });
 
   const handleFileSelect = (file: ActiveFile) => {
     setActiveFile(file);

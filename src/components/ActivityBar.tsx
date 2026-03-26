@@ -1,4 +1,4 @@
-import { User, Files, Search, GitBranch, Play, Blocks } from 'lucide-react';
+import { User, Files, Search, GitBranch, Play, Blocks, Layers } from 'lucide-react';
 import { SidebarView } from '../App';
 
 interface ActivityBarProps {
@@ -42,6 +42,12 @@ export function ActivityBar({ activeView, onActiveViewChange }: ActivityBarProps
           className={`cursor-pointer transition-colors ${activeView === 'extensions' ? 'text-zinc-300' : 'hover:text-zinc-300'}`} 
           strokeWidth={1.5} 
           onClick={() => onActiveViewChange('extensions')}
+        />
+        <Layers 
+          size={22} 
+          className={`cursor-pointer transition-colors ${activeView === 'openspec' ? 'text-purple-400' : 'hover:text-zinc-300'}`} 
+          strokeWidth={1.5} 
+          onClick={() => onActiveViewChange('openspec')}
         />
       </div>
     </div>
