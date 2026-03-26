@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight, ChevronDown, Folder, FolderOpen, FileText, FileJson, FileCode, MoreHorizontal, Search, PlusCircle, Database, GitMerge, Archive, Settings, Layers, Activity, CheckCircle2, GitBranch, GitCommit, X } from 'lucide-react';
+import { ChevronRight, ChevronDown, Folder, FolderOpen, FileText, FileJson, FileCode, MoreHorizontal, Search, PlusCircle, Database, GitMerge, Archive, Settings, Layers, Activity, CheckCircle2, GitBranch, GitCommit, X, Circle } from 'lucide-react';
 import { SidebarView, ActiveFile } from '../App';
 import { FileNode, INITIAL_FILE_TREE, MOCK_FILE_CONTENT } from '../lib/mockData';
 
@@ -299,14 +299,26 @@ function OpenSpecView({
 
               {/* Pipeline Mini */}
               <div className="flex items-center justify-between pt-3 border-t border-white/5">
-                 <div className="flex gap-1.5 items-center">
-                   <div className="w-2 h-2 rounded-full bg-green-500" title="Proposal (Done)" />
-                   <div className="w-3 h-[1px] bg-green-500/50" />
-                   <div className="w-2 h-2 rounded-full bg-green-500" title="Specs (Done)" />
-                   <div className="w-3 h-[1px] bg-green-500/50" />
-                   <div className="w-2 h-2 rounded-full bg-green-500" title="Design (Done)" />
-                   <div className="w-3 h-[1px] bg-purple-500/50" />
-                   <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse ring-2 ring-purple-500/30" title="Tasks (In Progress)" />
+                 <div className="flex items-center gap-1">
+                   <div className="flex items-center justify-center w-4 h-4 rounded-full bg-green-500/20 text-green-400" title="Proposal: Done">
+                     <CheckCircle2 size={10} />
+                   </div>
+                   <div className="w-2 h-[1px] bg-green-500/50" />
+                   <div className="flex items-center justify-center w-4 h-4 rounded-full bg-green-500/20 text-green-400" title="Specs: Done">
+                     <CheckCircle2 size={10} />
+                   </div>
+                   <div className="w-2 h-[1px] bg-green-500/50" />
+                   <div className="flex items-center justify-center w-4 h-4 rounded-full bg-green-500/20 text-green-400" title="Design: Done">
+                     <CheckCircle2 size={10} />
+                   </div>
+                   <div className="w-2 h-[1px] bg-purple-500/50" />
+                   <div className="flex items-center justify-center w-4 h-4 rounded-full bg-purple-500/20 text-purple-400 ring-1 ring-purple-500/50 animate-pulse" title="Tasks: In Progress">
+                     <Activity size={10} />
+                   </div>
+                   <div className="w-2 h-[1px] bg-zinc-700" />
+                   <div className="flex items-center justify-center w-4 h-4 rounded-full bg-zinc-800 text-zinc-500 border border-zinc-700" title="Implement: Not Started">
+                     <Circle size={8} />
+                   </div>
                  </div>
                  <span 
                    className="text-[10px] text-zinc-500 group-hover:text-purple-400 transition-colors"
@@ -607,6 +619,13 @@ function OpenSpecView({
                     </div>
                     <span className="text-purple-300 font-medium">Tasks</span>
                   </div>
+                  <div className="flex-1 h-[1px] bg-zinc-700 mx-2" />
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="w-6 h-6 rounded-full bg-zinc-800 text-zinc-500 flex items-center justify-center border border-zinc-700">
+                      <Circle size={10} />
+                    </div>
+                    <span className="text-zinc-500">Implement</span>
+                  </div>
                 </div>
               </div>
 
@@ -653,8 +672,103 @@ export function Sidebar({
   const [searchQuery, setSearchQuery] = useState('');
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
   const [isInitialized, setIsInitialized] = useState(false);
-  
-  const filteredTree = filterTree(INITIAL_FILE_TREE, searchQuery);
+  const [fileTree, setFileTree] = useState<FileNode[]>(INITIAL_FILE_TREE);
+  const [workspaceName, setWorkspaceName] = useState('KIRO-APP');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const handleOpenFolder = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const rootName = files[0].webkitRelativePath.split('/')[0] || 'Workspace';
+    
+    const tree: FileNode[] = [];
+    
+    const getDirNode = (pathParts: string[], currentTree: FileNode[]): FileNode[] => {
+      let currentLevel = currentTree;
+      let currentPath = '';
+      
+      for (let i = 0; i < pathParts.length; i++) {
+        const part = pathParts[i];
+        currentPath = currentPath ? `${currentPath}/${part}` : part;
+        
+        let node = currentLevel.find(n => n.name === part && n.type === 'directory');
+        if (!node) {
+          node = {
+            id: currentPath,
+            name: part,
+            type: 'directory',
+            children: []
+          };
+          currentLevel.push(node);
+        }
+        currentLevel = node.children!;
+      }
+      return currentLevel;
+    };
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const pathParts = file.webkitRelativePath.split('/');
+      pathParts.shift(); // Remove root folder name
+      
+      if (pathParts.length === 0) continue;
+      
+      const fileName = pathParts.pop()!;
+      const dirLevel = getDirNode(pathParts, tree);
+      
+      dirLevel.push({
+        id: file.webkitRelativePath,
+        name: fileName,
+        type: 'file',
+      });
+    }
+    
+    const sortTree = (nodes: FileNode[]) => {
+      nodes.sort((a, b) => {
+        if (a.type === b.type) return a.name.localeCompare(b.name);
+        return a.type === 'directory' ? -1 : 1;
+      });
+      nodes.forEach(n => {
+        if (n.children) sortTree(n.children);
+      });
+    };
+    
+    sortTree(tree);
+    setFileTree(tree);
+    setWorkspaceName(rootName.toUpperCase());
+    showToast(`Workspace re-detected: ${rootName}`);
+  };
+
+  const handleOpenFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const newNode: FileNode = {
+      id: file.name,
+      name: file.name,
+      type: 'file'
+    };
+    
+    setFileTree(prev => {
+      const exists = prev.find(n => n.name === file.name && n.type === 'file');
+      if (exists) return prev;
+      return [...prev, newNode].sort((a, b) => {
+        if (a.type === b.type) return a.name.localeCompare(b.name);
+        return a.type === 'directory' ? -1 : 1;
+      });
+    });
+    
+    onFileSelect({ id: file.name, name: file.name });
+    showToast(`Opened file: ${file.name}`);
+  };
+
+  const filteredTree = filterTree(fileTree, searchQuery);
   const searchResults = performSearch(globalSearchQuery);
 
   const renderContent = () => {
@@ -768,7 +882,17 @@ export function Sidebar({
             {/* Sidebar Header */}
             <div className="h-10 flex items-center justify-between px-4 border-b border-white/5 shrink-0">
               <span className="text-xs font-semibold text-zinc-400 tracking-wider">EXPLORER</span>
-              <MoreHorizontal size={14} className="text-zinc-500 hover:text-zinc-300 cursor-pointer transition-colors" />
+              <div className="flex items-center gap-2">
+                <label className="cursor-pointer text-zinc-500 hover:text-zinc-300 transition-colors" title="Open File">
+                  <FileText size={14} />
+                  <input type="file" className="hidden" onChange={handleOpenFile} />
+                </label>
+                <label className="cursor-pointer text-zinc-500 hover:text-zinc-300 transition-colors" title="Open Folder">
+                  <FolderOpen size={14} />
+                  <input type="file" {...{ webkitdirectory: "", directory: "" }} className="hidden" onChange={handleOpenFolder} />
+                </label>
+                <MoreHorizontal size={14} className="text-zinc-500 hover:text-zinc-300 cursor-pointer transition-colors" />
+              </div>
             </div>
 
             {/* Search Input */}
@@ -786,10 +910,15 @@ export function Sidebar({
             </div>
 
             {/* Project Root */}
-            <div className="flex-1 overflow-y-auto py-2 hide-scrollbar">
+            <div className="flex-1 overflow-y-auto py-2 hide-scrollbar relative">
+              {toastMessage && (
+                <div className="absolute top-0 left-0 right-0 bg-blue-500/20 text-blue-400 text-[10px] px-4 py-1.5 text-center border-b border-blue-500/30 z-10">
+                  {toastMessage}
+                </div>
+              )}
               <div className="px-4 py-1 flex items-center gap-1.5 text-xs font-bold text-zinc-300 mb-1">
                 <ChevronDown size={14} className="text-zinc-500" />
-                KIRO-APP
+                {workspaceName}
               </div>
               
               {/* File Tree */}
